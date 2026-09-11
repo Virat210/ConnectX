@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+/* 1. Tailwind CSS v4 Class-based Dark Mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Light Theme Palette: Warm Off-White / Ivory / Charcoal / Soft Beige / Warm Stone */
+    --bg-page: #faf8f5;
+    --bg-surface: #ffffff;
+    --bg-surface-elevated: #f5f2eb;
+    --border-subtle: #e6e2da;
+    --border-default: #d9d4c9;
+    --border-hover: #b8b1a3;
+    --text-primary: #18181b;
+    --text-secondary: #57534e;
+    --text-muted: #78716c;
+    --text-subtle: #a8a29e;
+
+    /* Warm metallic / champagne gold accent */
+    --accent-primary: #c29b38;
+    --accent-hover: #b38a29;
+    --accent-surface: #fbf6ec;
+    --accent-border: #ebd9b2;
+    --accent-text: #926d18;
+  }
+
+  .dark {
+    /* Dark Theme Palette: Deep Obsidian / Charcoal / Soft Bone / Warm Gray */
+    --bg-page: #0c0c0d;
+    --bg-surface: #141416;
+    --bg-surface-elevated: #1a1a1d;
+    --border-subtle: rgba(255, 255, 255, 0.07);
+    --border-default: rgba(255, 255, 255, 0.12);
+    --border-hover: rgba(255, 255, 255, 0.22);
+    --text-primary: #f5f5f7;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --text-subtle: #52525b;
+
+    /* Warm metallic gold accent in dark mode */
+    --accent-primary: #d4af37;
+    --accent-hover: #e2c056;
+    --accent-surface: rgba(212, 175, 55, 0.08);
+    --accent-border: rgba(212, 175, 55, 0.25);
+    --accent-text: #e2c056;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 113, 108, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 113, 108, 0.45);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* Glassmorphism helpers with warm/neutral tones */
+.glass-panel {
+  background: rgba(20, 20, 22, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Speaking pulse animation with warm amber/gold glow */
+@keyframes activeSpeakerGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 2px #d97706, 0 0 18px rgba(217, 119, 6, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 3px #f59e0b, 0 0 26px rgba(245, 158, 11, 0.6);
+  }
+}
+
+.speaker-active-border {
+  animation: activeSpeakerGlow 2s infinite ease-in-out;
+}
+
+/* Subtle background warm ambient radial gradients */
+.mesh-gradient-bg {
+  background-image: 
+    radial-gradient(at 15% 15%, rgba(217, 119, 6, 0.06) 0px, transparent 55%),
+    radial-gradient(at 85% 20%, rgba(120, 113, 108, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 80%, rgba(28, 25, 23, 0.05) 0px, transparent 50%);
+}
+
+.mesh-gradient-light {
+  background-image: 
+    radial-gradient(at 15% 15%, rgba(217, 119, 6, 0.04) 0px, transparent 55%),
+    radial-gradient(at 85% 20%, rgba(214, 211, 209, 0.5) 0px, transparent 50%),
+    radial-gradient(at 50% 80%, rgba(245, 242, 235, 0.6) 0px, transparent 50%);
+}

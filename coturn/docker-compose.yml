@@ -1,0 +1,22 @@
+version: '3.8'
+
+# ==============================================================================
+# Coturn Docker Compose for ConnectX WebRTC
+# ==============================================================================
+# NOTE: 'network_mode: host' is required so Coturn can directly bind to
+# the wide dynamic port range (49152-65535/udp) without Docker NAT translation.
+# ==============================================================================
+
+services:
+  coturn:
+    image: coturn/coturn:latest
+    container_name: connectx-coturn
+    restart: always
+    network_mode: host
+    volumes:
+      - ./turnserver.conf:/etc/turnserver.conf:ro
+      # Uncomment if Let's Encrypt certificates are installed on host:
+      # - /etc/letsencrypt:/etc/letsencrypt:ro
+    command:
+      - -c
+      - /etc/turnserver.conf

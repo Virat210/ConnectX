@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ConnectX | Premium Video Conferencing & Real-Time Collaboration</title>
+    <meta name="description" content="Connect, communicate, and collaborate effortlessly with ConnectX - the modern, high-definition video conferencing platform for high-performance teams." />
+    <meta name="theme-color" content="#0c0c0d" />
+    <!-- Prevent theme flashing on page load -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('connectx_theme');
+          var root = document.documentElement;
+          if (saved === 'light') {
+            root.classList.remove('dark');
+            root.classList.add('light');
+          } else {
+            root.classList.remove('light');
+            root.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#faf8f5] dark:bg-[#0c0c0d] text-stone-900 dark:text-stone-100 font-sans antialiased selection:bg-stone-800 selection:text-white dark:selection:bg-stone-200 dark:selection:text-stone-900 transition-colors duration-200">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

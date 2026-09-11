@@ -1,0 +1,47 @@
+# Render Blueprint Specification for ConnectX
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: connectx
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: onboarding@resend.dev
+      - key: SUPPORT_EMAIL
+        value: viratchauhan1010@gmail.com
+      - key: WEBRTC_STUN_SERVER
+        value: stun:stun.l.google.com:19302
+      - key: WEBRTC_TURN_SERVER
+        sync: false
+      - key: WEBRTC_TURN_PORT
+        value: 3478
+      - key: WEBRTC_TURN_TLS_PORT
+        value: 5349
+      - key: WEBRTC_TURN_REALM
+        sync: false
+      - key: WEBRTC_TURN_SECRET
+        sync: false
+      - key: WEBRTC_TURN_USERNAME
+        sync: false
+      - key: WEBRTC_TURN_CREDENTIAL
+        sync: false

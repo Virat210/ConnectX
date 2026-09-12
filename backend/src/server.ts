@@ -63,12 +63,17 @@ async function startServer() {
   }
 }
 
-// In Vercel serverless environment, do not start HTTP listener; pre-warm DB connection
+// Detect whether server.ts is the directly executed script or imported as a module
+const isDirectExecution =
+  Boolean(process.argv[1]) &&
+  (process.argv[1].endsWith('server.ts') || process.argv[1].endsWith('server.js'));
+
+// In standalone mode, start the server listener. In Vercel serverless, do not call listen()
 if (process.env.VERCEL === '1') {
   connectDB().catch((err: any) => {
     logger.error('Failed to pre-connect to MongoDB on Vercel initialization:', { error: err.message });
   });
-} else if (process.env.NODE_ENV !== 'test') {
+} else if (isDirectExecution && process.env.NODE_ENV !== 'test') {
   startServer();
 }
 

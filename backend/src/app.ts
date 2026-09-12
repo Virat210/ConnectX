@@ -8,6 +8,8 @@ import { env } from './config/env';
 import { apiLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 
+import { connectDB } from './config/db';
+
 import authRoutes from './routes/auth.routes';
 import meetingRoutes from './routes/meeting.routes';
 import userRoutes from './routes/user.routes';
@@ -17,6 +19,9 @@ import webrtcRoutes from './routes/webrtc.routes';
 
 const app = express();
 
+// Trust reverse proxy (essential for Vercel, Render, and express-rate-limit client IP detection)
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(
   helmet({
@@ -25,11 +30,11 @@ app.use(
   })
 );
 
-// CORS configuration supporting both separated and unified hosting
+// CORS configuration supporting unified Vercel hosting, localhost dev, and separated deployments
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, same-origin fetch)
+      // Allow requests with no origin (e.g. mobile apps, same-origin fetch, server-to-server)
       if (!origin) return callback(null, true);
       const allowedOrigins = [
         env.FRONTEND_URL,
@@ -38,7 +43,13 @@ app.use(
         'http://localhost:5000',
         'http://127.0.0.1:5000',
       ];
-      if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.startsWith('http://localhost:') ||
+        origin.endsWith('.vercel.app') ||
+        (process.env.VERCEL_URL && origin.includes(process.env.VERCEL_URL)) ||
+        (process.env.VERCEL_PROJECT_PRODUCTION_URL && origin.includes(process.env.VERCEL_PROJECT_PRODUCTION_URL))
+      ) {
         return callback(null, true);
       }
       return callback(null, true);
@@ -49,6 +60,25 @@ app.use(
   })
 );
 
+// Route normalization for Vercel serverless function rewrites
+app.use((req: Request, _res: Response, next) => {
+  const matchedPath = req.headers['x-matched-path'] as string;
+  if (matchedPath && matchedPath.startsWith('/api') && req.url.startsWith('/api/index')) {
+    req.url = matchedPath;
+  }
+  next();
+});
+
+// Ensure database connection is active for serverless invocations
+app.use(async (_req: Request, _res: Response, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Request parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -58,22 +88,30 @@ app.use(cookieParser());
 app.use('/api', apiLimiter);
 
 // Health Check
-app.get('/api/health', (req: Request, res: Response) => {
+app.get(['/api/health', '/health'], (req: Request, res: Response) => {
   res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: env.NODE_ENV,
+    serverless: process.env.VERCEL === '1',
   });
 });
 
-// API Route Mounts
+// API Route Mounts (mounted at both /api and root to guarantee compatibility under all rewrite modes)
 app.use('/api/auth', authRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webrtc', webrtcRoutes);
+
+app.use('/auth', authRoutes);
+app.use('/meetings', meetingRoutes);
+app.use('/users', userRoutes);
+app.use('/support', supportRoutes);
+app.use('/admin', adminRoutes);
+app.use('/webrtc', webrtcRoutes);
 
 // Detect built frontend dist directory
 const potentialDistPaths = [

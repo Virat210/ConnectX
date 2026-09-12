@@ -1,5 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { logger } from '../utils/logger';
+import { connectDB } from '../config/db';
 import { Meeting } from '../models/Meeting';
 import { Participant } from '../models/Participant';
 import { Message } from '../models/Message';
@@ -22,8 +23,15 @@ interface RoomParticipant {
 const rooms = new Map<string, Map<string, RoomParticipant>>();
 
 export function setupMeetingSockets(io: Server) {
-  io.on('connection', (socket: Socket) => {
+  io.on('connection', async (socket: Socket) => {
     logger.info(`Socket connected: ${socket.id}`);
+
+    // Ensure database connection is active when WebSocket connects
+    try {
+      await connectDB();
+    } catch (dbErr: any) {
+      logger.warn('Socket connect DB check warning:', dbErr.message);
+    }
 
     // Join Meeting Room
     socket.on('meeting:join', async (data: {

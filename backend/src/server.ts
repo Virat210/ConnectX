@@ -11,18 +11,32 @@ const server = http.createServer(app);
 // Initialize Socket.IO with CORS
 const io = new SocketIOServer(server, {
   cors: {
-    origin: [
-      env.FRONTEND_URL,
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:5000',
-      'http://127.0.0.1:5000',
-    ],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowedOrigins = [
+        env.FRONTEND_URL,
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+      ];
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.startsWith('http://localhost:') ||
+        origin.endsWith('.vercel.app') ||
+        (process.env.VERCEL_URL && origin.includes(process.env.VERCEL_URL)) ||
+        (process.env.VERCEL_PROJECT_PRODUCTION_URL && origin.includes(process.env.VERCEL_PROJECT_PRODUCTION_URL))
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST'],
   },
   pingTimeout: 60000,
   pingInterval: 25000,
+  transports: ['websocket', 'polling'],
 });
 
 // Attach WebRTC signaling and meeting room socket handlers
@@ -49,7 +63,17 @@ async function startServer() {
   }
 }
 
-startServer();
+// In Vercel serverless environment, do not start HTTP listener; pre-warm DB connection
+if (process.env.VERCEL === '1') {
+  connectDB().catch((err: any) => {
+    logger.error('Failed to pre-connect to MongoDB on Vercel initialization:', { error: err.message });
+  });
+} else if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
+
+export { server, io, app };
+export default server;
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

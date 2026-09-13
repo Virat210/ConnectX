@@ -23,6 +23,7 @@ const io = new SocketIOServer(server, {
       if (
         allowedOrigins.includes(origin) ||
         origin.startsWith('http://localhost:') ||
+        origin.endsWith('.onrender.com') ||
         origin.endsWith('.vercel.app') ||
         (process.env.VERCEL_URL && origin.includes(process.env.VERCEL_URL)) ||
         (process.env.VERCEL_PROJECT_PRODUCTION_URL && origin.includes(process.env.VERCEL_PROJECT_PRODUCTION_URL))
@@ -46,34 +47,28 @@ async function startServer() {
   try {
     // Connect to database
     await connectDB();
-
-    server.listen(env.PORT, () => {
-      logger.info(`====================================================`);
-      logger.info(`🚀 ConnectX Backend Server is RUNNING`);
-      logger.info(`📡 HTTP Port: ${env.PORT}`);
-      logger.info(`🌐 Environment: ${env.NODE_ENV}`);
-      logger.info(`👥 Developer / Owner: Virat Singh`);
-      logger.info(`📧 Support Email: ${env.SUPPORT_EMAIL}`);
-      logger.info(`⚡ Socket.IO WebRTC Signaling: ACTIVE`);
-      logger.info(`====================================================`);
-    });
   } catch (err: any) {
-    logger.error('Failed to start server:', { error: err.message });
-    process.exit(1);
+    logger.error('Initial MongoDB connection error (will retry automatically):', { error: err.message });
   }
+
+  server.listen(env.PORT, '0.0.0.0', () => {
+    logger.info(`====================================================`);
+    logger.info(`🚀 ConnectX Backend Server is RUNNING`);
+    logger.info(`📡 HTTP Port: ${env.PORT}`);
+    logger.info(`🌐 Environment: ${env.NODE_ENV}`);
+    logger.info(`👥 Developer / Owner: Virat Singh`);
+    logger.info(`📧 Support Email: ${env.SUPPORT_EMAIL}`);
+    logger.info(`⚡ Socket.IO WebRTC Signaling: ACTIVE`);
+    logger.info(`====================================================`);
+  });
 }
 
-// Detect whether server.ts is the directly executed script or imported as a module
-const isDirectExecution =
-  Boolean(process.argv[1]) &&
-  (process.argv[1].endsWith('server.ts') || process.argv[1].endsWith('server.js'));
-
-// In standalone mode, start the server listener. In Vercel serverless, do not call listen()
+// In standalone / Docker / Render mode, start the server listener. In Vercel serverless, do not call listen()
 if (process.env.VERCEL === '1') {
   connectDB().catch((err: any) => {
     logger.error('Failed to pre-connect to MongoDB on Vercel initialization:', { error: err.message });
   });
-} else if (isDirectExecution && process.env.NODE_ENV !== 'test') {
+} else if (process.env.NODE_ENV !== 'test') {
   startServer();
 }
 

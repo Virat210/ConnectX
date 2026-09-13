@@ -4,14 +4,15 @@ let socket = null;
 
 export function getSocket() {
   if (!socket) {
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || window.location.origin;
     socket = io(SOCKET_URL, {
       path: '/socket.io',
       autoConnect: false,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
     });
 
     socket.on('connect', () => {

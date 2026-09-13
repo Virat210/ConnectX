@@ -38,17 +38,18 @@ export class AuthController {
         role: user.role,
       });
 
+      const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('access_token', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: 3600 * 1000,
       });
 
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: 7 * 24 * 3600 * 1000,
       });
 
@@ -123,17 +124,18 @@ export class AuthController {
         role: user.role,
       });
 
+      const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('access_token', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: 3600 * 1000,
       });
 
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: 7 * 24 * 3600 * 1000,
       });
 
@@ -167,8 +169,14 @@ export class AuthController {
   }
 
   static async logout(req: Request, res: Response): Promise<void> {
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    const isProduction = process.env.NODE_ENV === 'production';
+    const clearOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
+    };
+    res.clearCookie('access_token', clearOptions);
+    res.clearCookie('refresh_token', clearOptions);
     res.status(200).json({
       success: true,
       message: 'Logged out successfully.',

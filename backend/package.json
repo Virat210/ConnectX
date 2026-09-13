@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "ConnectX Production Video Conferencing Backend",
   "main": "dist/server.js",
+  "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",

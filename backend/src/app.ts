@@ -7,8 +7,8 @@ import fs from 'fs';
 import { env } from './config/env';
 import { apiLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
-
 import { connectDB } from './config/db';
+import { logger } from './utils/logger';
 
 import authRoutes from './routes/auth.routes';
 import meetingRoutes from './routes/meeting.routes';
@@ -46,6 +46,7 @@ app.use(
       if (
         allowedOrigins.includes(origin) ||
         origin.startsWith('http://localhost:') ||
+        origin.endsWith('.onrender.com') ||
         origin.endsWith('.vercel.app') ||
         (process.env.VERCEL_URL && origin.includes(process.env.VERCEL_URL)) ||
         (process.env.VERCEL_PROJECT_PRODUCTION_URL && origin.includes(process.env.VERCEL_PROJECT_PRODUCTION_URL))
@@ -98,7 +99,7 @@ app.get(['/api/health', '/health'], (req: Request, res: Response) => {
   });
 });
 
-// API Route Mounts (mounted at both /api and root to guarantee compatibility under all rewrite modes)
+// API Route Mounts (all REST endpoints are prefixed with /api)
 app.use('/api/auth', authRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/users', userRoutes);
@@ -106,15 +107,9 @@ app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webrtc', webrtcRoutes);
 
-app.use('/auth', authRoutes);
-app.use('/meetings', meetingRoutes);
-app.use('/users', userRoutes);
-app.use('/support', supportRoutes);
-app.use('/admin', adminRoutes);
-app.use('/webrtc', webrtcRoutes);
-
 // Detect built frontend dist directory
 const potentialDistPaths = [
+  path.resolve('/app/dist'),
   path.resolve(process.cwd(), 'dist'),
   path.resolve(process.cwd(), '../dist'),
   path.resolve(__dirname, '../../dist'),
@@ -123,6 +118,8 @@ const potentialDistPaths = [
 const clientDistPath = potentialDistPaths.find((p) => fs.existsSync(path.join(p, 'index.html')));
 
 if (clientDistPath) {
+  logger.info(`Frontend dist located and served from: ${clientDistPath}`);
+
   // Serve static assets from production build
   app.use(express.static(clientDistPath));
 
@@ -133,6 +130,8 @@ if (clientDistPath) {
     }
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
+} else {
+  logger.warn('Frontend dist directory not found. Backend running in API-only mode.');
 }
 
 // 404 Handler for API endpoints

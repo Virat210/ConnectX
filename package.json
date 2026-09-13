@@ -9,7 +9,6 @@
   "scripts": {
     "start": "npm --prefix backend start",
     "backend:start": "npm --prefix backend start",
-    "postinstall": "npm --prefix backend install",
     "dev": "vite",
     "backend:dev": "npm --prefix backend run dev",
     "backend:build": "npm --prefix backend run build",

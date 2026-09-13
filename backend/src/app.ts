@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -19,10 +19,12 @@ import webrtcRoutes from './routes/webrtc.routes';
 
 const app = express();
 
-// Trust reverse proxy (essential for Vercel, Render, and express-rate-limit client IP detection)
+// Trust reverse proxy (essential for Render and rate limiter client IP detection)
 app.set('trust proxy', 1);
 
-// Security headers
+// ==============================================================================
+// 1. SECURITY & CORS MIDDLEWARE
+// ==============================================================================
 app.use(
   helmet({
     contentSecurityPolicy: false, // Allow WebRTC, inline scripts, and media streams
@@ -30,7 +32,6 @@ app.use(
   })
 );
 
-// CORS configuration supporting unified Vercel hosting, localhost dev, and separated deployments
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -42,6 +43,8 @@ app.use(
         'http://127.0.0.1:5173',
         'http://localhost:5000',
         'http://127.0.0.1:5000',
+        'http://localhost:10000',
+        'http://127.0.0.1:10000',
       ];
       if (
         allowedOrigins.includes(origin) ||
@@ -61,17 +64,18 @@ app.use(
   })
 );
 
-// Route normalization for Vercel serverless function rewrites
-app.use((req: Request, _res: Response, next) => {
-  const matchedPath = req.headers['x-matched-path'] as string;
-  if (matchedPath && matchedPath.startsWith('/api') && req.url.startsWith('/api/index')) {
-    req.url = matchedPath;
-  }
-  next();
-});
+// ==============================================================================
+// 2. JSON & BODY PARSER MIDDLEWARE
+// ==============================================================================
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
-// Ensure database connection is active for serverless invocations
-app.use(async (_req: Request, _res: Response, next) => {
+// Global API rate limiting
+app.use('/api', apiLimiter);
+
+// Database check exclusively for /api routes (prevents blocking static assets/SPA)
+app.use('/api', async (_req: Request, _res: Response, next: NextFunction) => {
   try {
     await connectDB();
     next();
@@ -80,16 +84,11 @@ app.use(async (_req: Request, _res: Response, next) => {
   }
 });
 
-// Request parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cookieParser());
-
-// Global API rate limiting
-app.use('/api', apiLimiter);
-
-// Health Check
-app.get(['/api/health', '/health'], (req: Request, res: Response) => {
+// ==============================================================================
+// 3. API ROUTES (All prefixed with /api/*)
+// ==============================================================================
+// Health Check (supports both /api/health and /health)
+app.get(['/api/health', '/health'], (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -99,7 +98,7 @@ app.get(['/api/health', '/health'], (req: Request, res: Response) => {
   });
 });
 
-// API Route Mounts (all REST endpoints are prefixed with /api)
+// REST API Route Mounts
 app.use('/api/auth', authRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/users', userRoutes);
@@ -107,52 +106,67 @@ app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webrtc', webrtcRoutes);
 
-// Detect built frontend dist directory
-const potentialDistPaths = [
+// ==============================================================================
+// 4. SOCKET.IO (Handled through HTTP server in server.ts)
+// Note: Handled by server.listen in server.ts; /socket.io requests bypass frontend.
+// ==============================================================================
+
+// ==============================================================================
+// 5. STATIC FRONTEND FILES & SPA FALLBACK
+// ==============================================================================
+const candidateDistDirs = [
   path.resolve('/app/dist'),
+  path.resolve(__dirname, '../../dist'),
   path.resolve(process.cwd(), 'dist'),
   path.resolve(process.cwd(), '../dist'),
-  path.resolve(__dirname, '../../dist'),
   path.resolve(__dirname, '../../../dist'),
 ];
-const clientDistPath = potentialDistPaths.find((p) => fs.existsSync(path.join(p, 'index.html')));
 
-if (clientDistPath) {
+const clientDistPath = candidateDistDirs.find((dir) =>
+  fs.existsSync(path.join(dir, 'index.html'))
+);
+
+if (clientDistPath && fs.existsSync(path.join(clientDistPath, 'index.html'))) {
+  const indexHtmlFile = path.join(clientDistPath, 'index.html');
   logger.info(`Frontend dist located and served from: ${clientDistPath}`);
 
-  // Serve static assets from production build
+  // Serve static assets (.js, .css, images, fonts, etc.)
   app.use(express.static(clientDistPath));
 
-  // Explicit handler for root URL
+  // Explicit root route: GET / returns /app/dist/index.html
   app.get('/', (_req: Request, res: Response) => {
-    res.sendFile(path.join(clientDistPath, 'index.html'));
+    res.sendFile(indexHtmlFile);
   });
 
-  // SPA fallback for client-side routing (excluding /api and /socket.io)
-  app.get('*', (req: Request, res: Response, next) => {
-    if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/socket.io')) {
+  // SPA Fallback for client-side routing (Express 4 & 5 compatible middleware)
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // Only handle GET and HEAD requests for SPA navigation
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
       return next();
     }
-    res.sendFile(path.join(clientDistPath, 'index.html'));
+
+    // Never intercept API endpoints, Socket.IO signaling, or static asset extensions
+    if (
+      req.path === '/api' ||
+      req.path.startsWith('/api/') ||
+      req.path === '/socket.io' ||
+      req.path.startsWith('/socket.io/') ||
+      /\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf|eot|map|webp|avif)$/i.test(req.path)
+    ) {
+      return next();
+    }
+
+    return res.sendFile(indexHtmlFile);
   });
 } else {
   logger.warn('Frontend dist directory not found. Backend running in API-only mode.');
 }
 
-// 404 Handler for API endpoints
-app.use('/api/*', (req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    message: `API endpoint not found: ${req.method} ${req.originalUrl}`,
-    code: 'NOT_FOUND',
-  });
-});
-
-// Fallback 404 Handler
-app.use('*', (req: Request, res: Response) => {
-  if (clientDistPath && req.method === 'GET') {
-    return res.sendFile(path.join(clientDistPath, 'index.html'));
-  }
+// ==============================================================================
+// 6. JSON 404 HANDLER
+// Reached only after API routes, static files, and SPA fallback have had their chance
+// ==============================================================================
+app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: `Resource not found: ${req.method} ${req.originalUrl}`,

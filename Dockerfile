@@ -52,9 +52,8 @@ COPY --from=builder /app/dist ./dist
 # Copy compiled backend JavaScript from builder stage
 COPY --from=builder /app/backend/dist ./backend/dist
 
-# Expose HTTP/WebSocket ports (Render default 10000 and fallback 5000)
+# Expose HTTP/WebSocket port (Render default 10000)
 EXPOSE 10000
-EXPOSE 5000
 
 # Run the production backend server directly with Node for proper signal handling (SIGTERM/SIGINT)
 CMD ["node", "backend/dist/server.js"]

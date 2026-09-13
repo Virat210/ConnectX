@@ -47,23 +47,16 @@ const io = new SocketIOServer(server, socketCorsConfig);
 // Attach WebRTC signaling and meeting room socket handlers
 setupMeetingSockets(io);
 
-async function startServer() {
-  try {
-    // Connect to database
-    await connectDB();
-  } catch (err: any) {
-    logger.error('Initial MongoDB connection error (will retry automatically):', { error: err.message });
-  }
-
-  // 1. Primary listener on env.PORT (Render assigned port, e.g. 10000)
+function startServer() {
+  // Single HTTP listener on env.PORT and 0.0.0.0 supplied by Render
   server.on('error', (err: any) => {
-    logger.error(`Primary HTTP server error on port ${env.PORT}:`, { error: err.message });
+    logger.error(`HTTP server error on port ${env.PORT}:`, { error: err.message });
   });
 
   server.listen(env.PORT, '0.0.0.0', () => {
     logger.info(`====================================================`);
     logger.info(`🚀 ConnectX Backend Server is RUNNING`);
-    logger.info(`📡 Primary HTTP Port: ${env.PORT}`);
+    logger.info(`📡 HTTP Port: ${env.PORT}`);
     logger.info(`🌐 Environment: ${env.NODE_ENV}`);
     logger.info(`👥 Developer / Owner: Virat Singh`);
     logger.info(`📧 Support Email: ${env.SUPPORT_EMAIL}`);
@@ -71,24 +64,10 @@ async function startServer() {
     logger.info(`====================================================`);
   });
 
-  // 2. Dual-port safety listener: If env.PORT is 10000, also bind 5000 (and vice versa)
-  // This guarantees Render reverse proxy can route traffic whether it targets 10000 or 5000!
-  const altPort = env.PORT === 10000 ? 5000 : (env.PORT === 5000 ? 10000 : null);
-  if (altPort) {
-    try {
-      const altServer = http.createServer(app);
-      altServer.on('error', (err: any) => {
-        logger.warn(`Secondary fallback port ${altPort} error (ignoring since primary is active): ${err.message}`);
-      });
-      const altIo = new SocketIOServer(altServer, socketCorsConfig);
-      setupMeetingSockets(altIo);
-      altServer.listen(altPort, '0.0.0.0', () => {
-        logger.info(`📡 Secondary fallback listener RUNNING on port: ${altPort}`);
-      });
-    } catch (err: any) {
-      logger.warn(`Could not start secondary listener on port ${altPort}: ${err.message}`);
-    }
-  }
+  // Connect to database in background without blocking port binding or health checks
+  connectDB().catch((err: any) => {
+    logger.error('Initial MongoDB connection error (will retry automatically):', { error: err.message });
+  });
 }
 
 // In standalone / Docker / Render mode, start the server listener. In Vercel serverless, do not call listen()

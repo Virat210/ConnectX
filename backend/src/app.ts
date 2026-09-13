@@ -123,9 +123,14 @@ if (clientDistPath) {
   // Serve static assets from production build
   app.use(express.static(clientDistPath));
 
-  // SPA fallback for client-side routing
+  // Explicit handler for root URL
+  app.get('/', (_req: Request, res: Response) => {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+
+  // SPA fallback for client-side routing (excluding /api and /socket.io)
   app.get('*', (req: Request, res: Response, next) => {
-    if (req.originalUrl.startsWith('/api')) {
+    if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/socket.io')) {
       return next();
     }
     res.sendFile(path.join(clientDistPath, 'index.html'));

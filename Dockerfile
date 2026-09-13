@@ -37,7 +37,7 @@ WORKDIR /app
 
 # Production environment variables
 ENV NODE_ENV=production
-ENV PORT=5000
+ENV PORT=10000
 
 # Copy manifests to install only backend production dependencies
 COPY package.json package-lock.json ./
@@ -52,7 +52,8 @@ COPY --from=builder /app/dist ./dist
 # Copy compiled backend JavaScript from builder stage
 COPY --from=builder /app/backend/dist ./backend/dist
 
-# Expose default HTTP/WebSocket port
+# Expose HTTP/WebSocket ports (Render default 10000 and fallback 5000)
+EXPOSE 10000
 EXPOSE 5000
 
 # Run the production backend server directly with Node for proper signal handling (SIGTERM/SIGINT)

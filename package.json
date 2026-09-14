@@ -12,6 +12,7 @@
     "dev": "vite",
     "backend:dev": "npm --prefix backend run dev",
     "backend:build": "npm --prefix backend run build",
+    "build:frontend": "vite build",
     "build": "vite build && npm --prefix backend run build",
     "lint": "oxlint",
     "preview": "vite preview"
